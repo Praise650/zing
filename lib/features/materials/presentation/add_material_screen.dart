@@ -134,48 +134,72 @@ class AddMaterialScreen extends StatelessWidget {
   }
 
   void _showPasteSheet(BuildContext context, ImportCubit cubit) {
-    final controller = TextEditingController();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (sheet) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          24,
-          20,
-          20 + MediaQuery.viewInsetsOf(sheet).bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ZingTextField(
-              label: 'Paste your text',
-              hint: 'Paste notes or an article here',
-              controller: controller,
-              maxLines: 6,
-            ),
-            const SizedBox(height: 16),
-            ValueListenableBuilder(
-              valueListenable: controller,
-              builder: (_, value, _) => ZingButton(
-                label: 'Create study set',
-                onPressed: value.text.trim().isEmpty
-                    ? null
-                    : () {
-                        Navigator.of(sheet).pop();
-                        cubit.start(
-                          'Pasted text',
-                          type: StudyMaterialType.pastedText,
-                          text: value.text,
-                        );
-                      },
-              ),
-            ),
-          ],
-        ),
+      builder: (sheet) => _PasteSheet(
+        onCreate: (text) {
+          Navigator.of(sheet).pop();
+          cubit.start(
+            'Pasted text',
+            type: StudyMaterialType.pastedText,
+            text: text,
+          );
+        },
       ),
-    ).whenComplete(controller.dispose);
+    );
   }
+}
+
+/// Owns its controller so it is only disposed after the sheet has closed.
+class _PasteSheet extends StatefulWidget {
+  const _PasteSheet({required this.onCreate});
+
+  final ValueChanged<String> onCreate;
+
+  @override
+  State<_PasteSheet> createState() => _PasteSheetState();
+}
+
+class _PasteSheetState extends State<_PasteSheet> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      20,
+      24,
+      20,
+      20 + MediaQuery.viewInsetsOf(context).bottom,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ZingTextField(
+          label: 'Paste your text',
+          hint: 'Paste notes or an article here',
+          controller: _controller,
+          maxLines: 6,
+        ),
+        const SizedBox(height: 16),
+        ValueListenableBuilder(
+          valueListenable: _controller,
+          builder: (_, value, _) => ZingButton(
+            label: 'Create study set',
+            onPressed: value.text.trim().isEmpty
+                ? null
+                : () => widget.onCreate(value.text),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 extension on TextStyle? {
